@@ -2,7 +2,7 @@
 
 import styled from 'styled-components'
 import type { SnowyProps, CustomCSSProperties } from './types'
-import { useMelts } from './hook/useMelts'
+import { useMelts } from './hook/use-melts'
 import { convertStyles } from './util/helper'
 
 const StyledSnow = styled.div.withConfig({
