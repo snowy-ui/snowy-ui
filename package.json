@@ -1,14 +1,16 @@
 {
-  "name": "snowy-ui",
+  "name": "@snowy-ui/react",
   "version": "0.0.0",
   "private": true,
   "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "author": "Refirst",
   "license": "MIT",
-  "dependencies": {
+  "peerDependencies": {
     "styled-components": "^6.1.12"
   },
   "devDependencies": {
+    "@types/node": "^20.14.11",
     "@types/react": "^18.3.3",
     "typescript": "^5.5.3"
   }
