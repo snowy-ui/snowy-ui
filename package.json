@@ -1,10 +1,12 @@
 {
   "name": "@snowy-ui/react",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "author": "Refirst",
+  "repository": "github:snowy-ui/snowy-ui",
+  "homepage": "https://snowy-ui-site.vercel.app/",
   "license": "MIT",
   "peerDependencies": {
     "styled-components": "^6.1.12"
