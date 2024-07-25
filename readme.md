@@ -1,3 +1,3 @@
 # ❄ Snowy UI
 
-Please visit this [website](https://snowy-ui-site.vercel.app) for more details.
+Please visit this [website](https://snowy-ui.vercel.app) for more details.
