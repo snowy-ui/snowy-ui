@@ -1,5 +1,3 @@
-'use client'
-
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
 import { MotionType, UseMeltsProps } from '../types'
 
@@ -11,8 +9,8 @@ export function useMelts({ melts }: UseMeltsProps) {
   const [hasDelay, setHasDelay] = useState(false)
   const { exit, entry } = melts || {}
 
-  const exitTime = exit?.transition?.duration
-  const entryTime = entry?.transition?.duration
+  const exitTime = exit?.transition?.duration ?? 0.3
+  const entryTime = entry?.transition?.duration ?? 0.3
 
   const getClientElement = useCallback(() => {
     const element = document.getElementById('#snowy-ui')
@@ -111,10 +109,9 @@ export function useMelts({ melts }: UseMeltsProps) {
       // To the exit animation.
       if (exit) motion(exit, exitTime, exitEase)
       e.preventDefault()
-      if (typeof exit != 'undefined')
-        setTimeout(() => {
-          setHasDelay(true)
-        }, (exitTime as number) * 1000)
+      setTimeout(() => {
+        setHasDelay(true)
+      }, (exit ? exitTime : 0) * 1000)
       anchor = anchorElement
     },
     [easeString, exit, exitTime, motion]
