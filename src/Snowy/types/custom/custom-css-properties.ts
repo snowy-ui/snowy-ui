@@ -5,8 +5,7 @@ import type {
   CSSFontSizeSubValue,
   CSSGlobalValue,
   CSSNumericValue,
-  CSSMarginValue,
-  CSSPaddingValue,
+  CSSEdgeSizeValue,
   CSSRadiusValues,
 } from '../common/css-values'
 import type { CSSColorValue, CSSVariableProperties, CSSVariableValue } from '../common/css-variables'
@@ -24,12 +23,12 @@ type AndStringType = {
 type CustomExtendProperties = {
   width?: CSSNumericValue | CSSLengthSubValue | 'auto'
   height?: CSSNumericValue | CSSLengthSubValue | 'auto'
-  margin?: CSSMarginValue
+  margin?: CSSEdgeSizeValue
   marginBottom?: CSSNumericValue | 'auto'
   marginLeft?: CSSNumericValue | 'auto'
   marginRight?: CSSNumericValue | 'auto'
   marginTop?: CSSNumericValue | 'auto'
-  padding?: CSSPaddingValue
+  padding?: CSSEdgeSizeValue
   paddingBottom?: CSSNumericValue
   paddingLeft?: CSSNumericValue
   paddingRight?: CSSNumericValue
