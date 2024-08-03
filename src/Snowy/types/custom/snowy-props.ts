@@ -1,6 +1,5 @@
 import { AnchorHTMLAttributes, CSSProperties } from 'react'
-import { CustomCSSProperties } from './custom-css-properties'
-import { MotionType } from './motion-type'
+import { MotionType, SXCSSProperties } from './motion-type'
 import { LinkProps } from './next-link-props'
 import { ReactLinkProps } from './react-link-props'
 
@@ -10,7 +9,7 @@ type CommonSnowyProps = {
     entry?: MotionType
   }
   in: React.ElementType
-  sx?: CustomCSSProperties
+  sx?: SXCSSProperties
   children?: React.ReactNode
   className?: string
   style?: CSSProperties
