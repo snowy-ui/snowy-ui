@@ -1,3 +1,5 @@
+import { CustomCSSProperties } from './custom-css-properties'
+
 type MotionProperties = {
   opacity?: number
   blur?: number
@@ -16,9 +18,17 @@ type MotionProperties = {
 
 export type MotionType = MotionProperties | undefined
 
+export type SXCSSProperties = CustomCSSProperties & {
+  transform?: string
+  opacity?: string | number
+  scale?: string | number
+  filter?: string
+}
+
 export type UseMeltsProps = {
   melts?: {
     exit?: MotionType
     entry?: MotionType
   }
+  sx?: SXCSSProperties
 }

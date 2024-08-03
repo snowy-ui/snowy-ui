@@ -5,17 +5,16 @@ let anchor: HTMLAnchorElement | null
 let clicked: boolean
 const useCapture = true
 
-export function useMelts({ melts }: UseMeltsProps) {
+export function useMelts({ melts, sx }: UseMeltsProps) {
   const [hasDelay, setHasDelay] = useState(false)
   const { exit, entry } = melts || {}
 
-  const exitTime = exit?.transition?.duration ?? 0.3
-  const entryTime = entry?.transition?.duration ?? 0.3
+  const exitTime = exit?.transition?.duration
+  const entryTime = entry?.transition?.duration
 
   const getClientElement = useCallback(() => {
     const element = document.getElementById('#snowy-ui')
-    if (element instanceof HTMLElement) return element
-    else return null
+    return element instanceof HTMLElement ? element : null
   }, [])
 
   const transformString = (m: MotionType) => {
@@ -29,25 +28,24 @@ export function useMelts({ melts }: UseMeltsProps) {
     if (m.rotateX !== undefined) transforms.push(`rotateX(${m.rotateX}deg)`)
     if (m.rotateY !== undefined) transforms.push(`rotateY(${m.rotateY}deg)`)
     if (m.rotate3d !== undefined) transforms.push(`rotate3d(${x}, ${y}, ${z}, ${a})`)
-
     return transforms.join(' ')
   }
 
   const easeString = useCallback((m: MotionType) => {
     const ease = m?.transition?.ease
     if (!ease) return ''
-    if (typeof ease === 'string') return ease
-    return `cubic-bezier(${ease})`
+    return typeof ease === 'string' ? ease : `cubic-bezier(${ease})`
   }, [])
 
   const motion = useCallback(
     (m: MotionType, time: number | undefined, ease: string | undefined) => {
-      const dom = getClientElement() as HTMLElement
+      const dom = getClientElement()
+      if (!dom || !m) return
 
       const transformStyle = transformString(m)
-      if (!m) return
-      if (m.opacity !== undefined) dom.style.opacity = String(m.opacity)
+      if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
       if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
+      if (m.scale !== undefined) dom.style.scale = m.scale.toString()
       if (transformStyle !== '') dom.style.transform = transformStyle
       dom.style.transition = ease ? `all ${time}s ${ease}` : `all ${time}s`
     },
@@ -56,20 +54,63 @@ export function useMelts({ melts }: UseMeltsProps) {
 
   const motionInitialize = useCallback(
     (m: MotionType) => {
-      const dom = getClientElement() as HTMLElement
+      const dom = getClientElement()
+      if (!dom || !m) return
 
       const transformStyle = transformString(m)
-      if (!m) return
-      if (m?.opacity !== undefined) dom.style.opacity = String(m.opacity)
-      if (m?.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
+      if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
+      if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
+      if (m.scale !== undefined) dom.style.scale = m.scale.toString()
       if (transformStyle !== '') dom.style.transform = transformStyle
       dom.style.transition = 'none'
     },
     [getClientElement]
   )
 
-  const init: MotionType = useMemo(
-    () => ({
+  const parseTransform = (transform: string): Partial<MotionType> => {
+    const result: Partial<MotionType> = {}
+    const regex = /(\w+)\(([^)]+)\)/g
+    let match
+    while ((match = regex.exec(transform))) {
+      const [, func, value] = match
+      const [translateX, translateY] = value.split(',').map((v) => parseFloat(v.trim()))
+      const [x, y, z, angle] = value.split(',').map((v) => v.trim())
+      switch (func) {
+        case 'translate':
+          if (!isNaN(translateX)) result.x = translateX
+          if (!isNaN(translateY)) result.y = translateY
+          break
+        case 'translateX':
+          result.x = parseFloat(value)
+          break
+        case 'translateY':
+          result.y = parseFloat(value)
+          break
+        case 'scale':
+          result.scale = parseFloat(value)
+          break
+        case 'rotate':
+          result.rotate = parseFloat(value)
+          break
+        case 'rotateX':
+          result.rotateX = parseFloat(value)
+          break
+        case 'rotateY':
+          result.rotateY = parseFloat(value)
+          break
+        case 'rotate3d':
+          result.rotate3d = [parseFloat(x), parseFloat(y), parseFloat(z), angle]
+          break
+        case 'blur':
+          result.blur = parseFloat(value)
+          break
+      }
+    }
+    return result
+  }
+
+  const sxState = useMemo(() => {
+    const baseState: MotionType = {
       opacity: 1,
       blur: 0,
       scale: 1,
@@ -79,14 +120,67 @@ export function useMelts({ melts }: UseMeltsProps) {
       rotateX: 0,
       rotateY: 0,
       rotate3d: [0, 0, 1, '0deg'],
-    }),
-    []
-  )
+    }
+
+    if (sx) {
+      const transformValues = typeof sx.transform === 'string' ? parseTransform(sx.transform) : {}
+      return {
+        ...baseState,
+        opacity: sx.opacity !== undefined ? parseFloat(sx.opacity as string) : baseState.opacity,
+        blur: sx.filter !== undefined ? parseFloat((sx.filter as string).replace('blur(', '').replace('px)', '')) : baseState.blur,
+        scale:
+          sx.scale !== undefined
+            ? parseFloat(sx.scale as string)
+            : transformValues?.scale !== undefined
+            ? parseFloat(transformValues?.scale.toString())
+            : baseState.scale, // 修正: sx.scaleとtransformValues?.scaleを両方処理
+        x: transformValues?.x ?? baseState.x,
+        y: transformValues?.y ?? baseState.y,
+        rotate: transformValues?.rotate ?? baseState.rotate,
+        rotateX: transformValues?.rotateX ?? baseState.rotateX,
+        rotateY: transformValues?.rotateY ?? baseState.rotateY,
+        rotate3d: transformValues?.rotate3d ?? baseState.rotate3d,
+      }
+    }
+
+    return baseState
+  }, [sx])
+
+  const entryStart: MotionType = useMemo(() => {
+    if (!entry) return sxState
+    return {
+      ...sxState,
+      ...entry,
+      opacity: (sxState.opacity ?? 1) * (entry?.opacity ?? 1),
+      blur: (sxState.blur ?? 0) + (entry?.blur ?? 0),
+      scale: (sxState.scale ?? 1) * (entry?.scale ?? 1),
+      x: (sxState.x ?? 0) + (entry?.x ?? 0),
+      y: (sxState.y ?? 0) + (entry?.y ?? 0),
+      rotate: (sxState.rotate ?? 0) + (entry?.rotate ?? 0),
+      rotateX: (sxState.rotateX ?? 0) + (entry?.rotateX ?? 0),
+      rotateY: (sxState.rotateY ?? 0) + (entry?.rotateY ?? 0),
+    }
+  }, [entry, sxState])
+
+  const exitStart: MotionType = useMemo(() => {
+    if (!exit) return sxState
+    return {
+      ...sxState,
+      ...exit,
+      opacity: (sxState.opacity ?? 1) * (exit?.opacity ?? 1),
+      blur: (sxState.blur ?? 0) + (exit?.blur ?? 0),
+      scale: (sxState.scale ?? 1) * (exit?.scale ?? 1),
+      x: (sxState.x ?? 0) + (exit?.x ?? 0),
+      y: (sxState.y ?? 0) + (exit?.y ?? 0),
+      rotate: (sxState.rotate ?? 0) + (exit?.rotate ?? 0),
+      rotateX: (sxState.rotateX ?? 0) + (exit?.rotateX ?? 0),
+      rotateY: (sxState.rotateY ?? 0) + (exit?.rotateY ?? 0),
+    }
+  }, [sxState, exit])
 
   const eventTargetHTMLElement = (e: MouseEvent) => {
     const clickTarget = e.target
-    if (clickTarget instanceof HTMLElement) return clickTarget
-    else return null
+    return clickTarget instanceof HTMLElement ? clickTarget : null
   }
 
   const isExternalLink = (href: string) => {
@@ -98,34 +192,28 @@ export function useMelts({ melts }: UseMeltsProps) {
     (e: MouseEvent) => {
       clicked = true
       const target = eventTargetHTMLElement(e)
-      if (target == null) return
+      if (!target) return
 
       const anchorElement = target.closest('a')
-      if (anchorElement == null) return
-      if (isExternalLink(anchorElement.href)) return
-      if (window.location.href === anchorElement.href) return
+      if (!anchorElement || isExternalLink(anchorElement.href) || window.location.href === anchorElement.href) return
 
       const exitEase = easeString(exit)
       // To the exit animation.
-      if (exit) motion(exit, exitTime, exitEase)
+      if (exit) motion(exitStart, exitTime, exitEase)
       e.preventDefault()
-      setTimeout(() => {
-        setHasDelay(true)
-      }, (exit ? exitTime : 0) * 1000)
+      if (exit) {
+        setTimeout(() => {
+          setHasDelay(true)
+        }, (exitTime as number) * 1000)
+      }
       anchor = anchorElement
     },
-    [easeString, exit, exitTime, motion]
+    [easeString, exit, exitStart, exitTime, motion]
   )
 
   const innerEffect = useCallback(() => {
-    const clickEvent = new MouseEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true,
-    })
-    if (!hasDelay) return
-    if (anchor == null) return
-
+    if (!hasDelay || !anchor) return
+    const clickEvent = new MouseEvent('click', { view: window, bubbles: true, cancelable: true })
     anchor.dispatchEvent(clickEvent)
     anchor = null
   }, [hasDelay])
@@ -138,26 +226,26 @@ export function useMelts({ melts }: UseMeltsProps) {
 
     return () => {
       document.body.removeEventListener('click', clickHandler, useCapture)
-      clicked && motionInitialize(exit)
+      if (clicked) motionInitialize(exitStart)
       clicked = false
     }
-  }, [clickHandler, exit, innerEffect, melts, motionInitialize])
+  }, [clickHandler, exitStart, innerEffect, melts, motionInitialize])
 
   // ---------- Entry effect - //
   useLayoutEffect(() => {
     if (!melts) return
     const entryEase = easeString(entry)
 
-    motionInitialize(entry)
+    motionInitialize(entryStart)
     const initialMotion = () => {
-      if (entry) motion(init, entryTime, entryEase)
+      if (entry) motion(sxState, entryTime, entryEase)
     }
     const animateId = requestAnimationFrame(initialMotion)
 
     return () => {
       cancelAnimationFrame(animateId)
     }
-  }, [easeString, entry, entryTime, init, melts, motion, motionInitialize])
+  }, [easeString, entry, entryStart, entryTime, melts, motion, motionInitialize, sxState])
 
   return
 }
