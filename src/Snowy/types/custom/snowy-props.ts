@@ -18,7 +18,7 @@ type CommonSnowyProps = {
   to?: string
 }
 
-type ElementWithHref = 'a' | React.ComponentType<AnchorHTMLAttributes<HTMLAnchorElement>> | LinkProps
+type ElementWithHref = 'a' | React.ComponentType<AnchorHTMLAttributes<HTMLAnchorElement>> | React.ComponentType<LinkProps>
 
 type ElementWithTo = ReactLinkProps
 
