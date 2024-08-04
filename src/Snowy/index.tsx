@@ -21,10 +21,10 @@ const Snowy = <E extends React.ElementType>({
   to,
   ...props
 }: SnowyProps<E> & React.HTMLAttributes<HTMLElement>) => {
-  useMelts({ melts, sx })
+  const ref = useMelts({ melts, sx })
 
   return (
-    <StyledSnow as={Element} sx={sx} melts={melts} href={href} to={to} className={className} style={style} id="#snowy-ui" {...props}>
+    <StyledSnow ref={ref} as={Element} sx={sx} melts={melts} href={href} to={to} className={className} style={style} {...props}>
       {children}
     </StyledSnow>
   )

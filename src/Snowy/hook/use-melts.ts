@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MotionType, UseMeltsProps } from '../types'
 
 let anchor: HTMLAnchorElement | null
@@ -6,16 +6,12 @@ let clicked: boolean
 const useCapture = true
 
 export function useMelts({ melts, sx }: UseMeltsProps) {
+  const ref = useRef<HTMLElement>(null)
   const [hasDelay, setHasDelay] = useState(false)
   const { exit, entry } = melts || {}
 
   const exitTime = exit?.transition?.duration ?? 0.3
   const entryTime = entry?.transition?.duration ?? 0.3
-
-  const getClientElement = useCallback(() => {
-    const element = document.getElementById('#snowy-ui')
-    return element instanceof HTMLElement ? element : null
-  }, [])
 
   const transformString = (m: MotionType) => {
     if (!m) return ''
@@ -37,35 +33,29 @@ export function useMelts({ melts, sx }: UseMeltsProps) {
     return typeof ease === 'string' ? ease : `cubic-bezier(${ease})`
   }, [])
 
-  const motion = useCallback(
-    (m: MotionType, time: number | undefined, ease: string | undefined) => {
-      const dom = getClientElement()
-      if (!dom || !m) return
+  const motion = useCallback((m: MotionType, time: number | undefined, ease: string | undefined) => {
+    const dom = ref.current
+    if (!dom || !m) return
 
-      const transformStyle = transformString(m)
-      if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
-      if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
-      if (m.scale !== undefined) dom.style.scale = m.scale.toString()
-      if (transformStyle !== '') dom.style.transform = transformStyle
-      dom.style.transition = ease ? `all ${time}s ${ease}` : `all ${time}s`
-    },
-    [getClientElement]
-  )
+    const transformStyle = transformString(m)
+    if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
+    if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
+    if (m.scale !== undefined) dom.style.scale = m.scale.toString()
+    if (transformStyle !== '') dom.style.transform = transformStyle
+    dom.style.transition = ease ? `all ${time}s ${ease}` : `all ${time}s`
+  }, [])
 
-  const motionInitialize = useCallback(
-    (m: MotionType) => {
-      const dom = getClientElement()
-      if (!dom || !m) return
+  const motionInitialize = useCallback((m: MotionType) => {
+    const dom = ref.current
+    if (!dom || !m) return
 
-      const transformStyle = transformString(m)
-      if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
-      if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
-      if (m.scale !== undefined) dom.style.scale = m.scale.toString()
-      if (transformStyle !== '') dom.style.transform = transformStyle
-      dom.style.transition = 'none'
-    },
-    [getClientElement]
-  )
+    const transformStyle = transformString(m)
+    if (m.opacity !== undefined) dom.style.opacity = m.opacity.toString()
+    if (m.blur !== undefined) dom.style.filter = `blur(${m.blur}px)`
+    if (m.scale !== undefined) dom.style.scale = m.scale.toString()
+    if (transformStyle !== '') dom.style.transform = transformStyle
+    dom.style.transition = 'none'
+  }, [])
 
   const parseTransform = (transform: string): Partial<MotionType> => {
     const result: Partial<MotionType> = {}
@@ -245,5 +235,5 @@ export function useMelts({ melts, sx }: UseMeltsProps) {
     }
   }, [easeString, entry, entryStart, entryTime, melts, motion, motionInitialize, sxState])
 
-  return
+  return ref
 }
