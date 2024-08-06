@@ -1,17 +1,57 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MotionType, UseMeltsProps } from '../types'
-
-let anchor: HTMLAnchorElement | null
-let clicked: boolean
-const useCapture = true
 
 export function useMelts({ melts, sx }: UseMeltsProps) {
   const ref = useRef<HTMLElement>(null)
-  const [hasDelay, setHasDelay] = useState(false)
+  const [hasClickDelay, setHasClickDelay] = useState(false)
+  const [anchor, setAnchor] = useState<HTMLAnchorElement | undefined>(undefined)
   const { exit, entry } = melts || {}
 
   const exitTime = exit?.transition?.duration ?? 0.3
   const entryTime = entry?.transition?.duration ?? 0.3
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const targetAnchor = target.closest('a') as HTMLAnchorElement
+      if (isExternalLink(targetAnchor.href) || targetAnchor.target === '_blank' || window.location.href === targetAnchor.href) return
+      setAnchor(targetAnchor)
+      e.preventDefault()
+      timerId = setTimeout(() => {
+        setHasClickDelay(true)
+      }, exitTime * 1000)
+    }
+
+    const clickHandler = (e: MouseEvent) => {
+      if (hasClickDelay) return
+      handleClick(e)
+    }
+
+    const anchors = document.querySelectorAll('a')
+    anchors.forEach((a) => a.addEventListener('click', clickHandler))
+
+    return () => {
+      clearTimeout(timerId)
+      anchors.forEach((a) => a.removeEventListener('click', clickHandler))
+    }
+  }, [anchor?.href, exitTime, hasClickDelay])
+
+  useLayoutEffect(() => {
+    if (!anchor) return
+
+    const clickEvent = new MouseEvent('click', {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    })
+    anchor.dispatchEvent(clickEvent)
+    return () => {
+      if (hasClickDelay) return
+      setAnchor(undefined)
+      setHasClickDelay(false)
+    }
+  }, [anchor, hasClickDelay])
 
   const transformString = (m: MotionType) => {
     if (!m) return ''
@@ -168,72 +208,42 @@ export function useMelts({ melts, sx }: UseMeltsProps) {
     }
   }, [sxState, exit])
 
-  const eventTargetHTMLElement = (e: MouseEvent) => {
-    const clickTarget = e.target
-    return clickTarget instanceof HTMLElement ? clickTarget : null
-  }
-
   const isExternalLink = (href: string) => {
     const url = new URL(href, window.location.origin)
     return url.origin !== window.location.origin
   }
 
-  const clickHandler = useCallback(
-    (e: MouseEvent) => {
-      clicked = true
-      const target = eventTargetHTMLElement(e)
-      if (!target) return
-
-      const anchorElement = target.closest('a')
-      if (!anchorElement || isExternalLink(anchorElement.href) || window.location.href === anchorElement.href) return
-
-      const exitEase = easeString(exit)
-      // To the exit animation.
-      if (exit) motion(exitStart, exitTime, exitEase)
-      e.preventDefault()
-      setTimeout(() => {
-        setHasDelay(true)
-      }, (exit ? exitTime : 0) * 1000)
-      anchor = anchorElement
-    },
-    [easeString, exit, exitStart, exitTime, motion]
-  )
-
-  const innerEffect = useCallback(() => {
-    if (!hasDelay || !anchor) return
-    const clickEvent = new MouseEvent('click', { view: window, bubbles: true, cancelable: true })
-    anchor.dispatchEvent(clickEvent)
-    anchor = null
-  }, [hasDelay])
-
   // ---------- Exit effect - //
   useLayoutEffect(() => {
-    if (!melts) return
-    innerEffect()
-    document.body.addEventListener('click', clickHandler, useCapture)
+    if (!anchor || !melts || isExternalLink(anchor.href) || window.location.href === anchor.href || !exit) return
+    const exitEase = easeString(exit)
 
+    motion(exitStart, exitTime, exitEase)
     return () => {
-      document.body.removeEventListener('click', clickHandler, useCapture)
-      if (clicked) motionInitialize(exitStart)
-      clicked = false
+      motionInitialize(exitStart)
     }
-  }, [clickHandler, exitStart, innerEffect, melts, motionInitialize])
+  }, [anchor, easeString, exit, exitStart, exitTime, melts, motion, motionInitialize])
 
   // ---------- Entry effect - //
   useLayoutEffect(() => {
-    if (!melts) return
+    if (anchor || !melts || !entry) return
     const entryEase = easeString(entry)
 
     motionInitialize(entryStart)
     const initialMotion = () => {
-      if (entry) motion(sxState, entryTime, entryEase)
+      motion(sxState, entryTime, entryEase)
     }
-    const animateId = requestAnimationFrame(initialMotion)
+
+    let animationFrameId: number
+    const timeoutId = setTimeout(() => {
+      animationFrameId = requestAnimationFrame(initialMotion)
+    })
 
     return () => {
-      cancelAnimationFrame(animateId)
+      clearTimeout(timeoutId)
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
     }
-  }, [easeString, entry, entryStart, entryTime, melts, motion, motionInitialize, sxState])
+  }, [anchor, easeString, entry, entryStart, entryTime, melts, motion, motionInitialize, sxState])
 
   return ref
 }
