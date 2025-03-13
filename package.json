@@ -8,6 +8,9 @@
   "repository": "github:snowy-ui/snowy-ui",
   "homepage": "https://snowy-ui.vercel.app/",
   "license": "MIT",
+  "files": [
+    "dist/"
+  ],
   "peerDependencies": {
     "styled-components": "^6.1.12"
   },
